@@ -1,5 +1,6 @@
 package jsonast;
 
+//root of the ast
 public class Root extends JsonNode {
 
 	private Code code;

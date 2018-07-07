@@ -15,21 +15,27 @@ public class AuxMethods {
 		List<Expression> result = new ArrayList<>();
 		
 		List<Trace> tracelist = traces.getTraces();
+		//the trace with a call statement
 		Trace callTrace = null;
+		//searchs starting at the target index until it finds a trace
+		//with a call statement
 		for(int i = targetindex; i >=0; i--){
 			if(tracelist.get(i).getEvent().equals("call")){
 				callTrace = tracelist.get(i);
 			break;
 			}
 		}
-		
+		//gets a list of local variables at the trace with a call stmt
 		List<Var> args = callTrace.getLocals().getVar();
+		//gets a list of heap  variables at the trace with a call stmt
 		List<Var> heapObjs = callTrace.getHeap().getVar();
 		
 		for(Var v: args){
+			//if its an int
 			if(v.getType() == 0){
 				result.add(new ExprString(v.getValue().toString()));
 			}
+			//if its a ref variable, search for the value in the heap
 			if(v.getType() == 1){
 				Integer heapIndex = v.getValue();
 				for(Var h: heapObjs){

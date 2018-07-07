@@ -3,7 +3,7 @@ package sketchobj.core;
 import java.util.List;
 
 import constraintfactory.ConstData;
-
+//parent of the ast for compiling the code in the ori trace
 public abstract class SketchObject {
 	protected int indentation;	// for toString
 

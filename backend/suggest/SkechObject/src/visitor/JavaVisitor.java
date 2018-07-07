@@ -8,7 +8,7 @@ import sketchobj.core.*;
 import sketchobj.expr.*;
 import sketchobj.expr.ExprArrayRange.RangeLen;
 import sketchobj.stmts.*;
-
+//used to walk through the ast for the java code in the ori trace
 public class JavaVisitor extends simpleJavaBaseVisitor<SketchObject> {
 
 	// ----------head----------

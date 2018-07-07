@@ -31,12 +31,18 @@ public class MainEntrance {
 	private int indexOfCorrectTrace;
 
 	private Root root;
+	//the source code from the buggy trace
 	private String code;
+	//function executing during time of correction
 	private String targetFunc;
 	private Traces traces;
 
 	private List<Integer> repair_range;
 
+	/*
+	 * @param json - buggy stack trace
+	 * @param correctTrace - trace with the corrected variable value
+	 */
 	public MainEntrance(String json, String correctTrace, int indexOfCorrectTrace) {
 		this.json = json;
 		this.correctTrace = correctTrace;
@@ -45,26 +51,34 @@ public class MainEntrance {
 	}
 
 	public Map<Integer, Integer> Synthesize(boolean useLC) throws InterruptedException {
+		//gets function executing during time of correction
 		this.targetFunc = extractFuncName(correctTrace);
+		//creates ast with root as the root of the ast
 		this.root = jsonRootCompile(this.json);
+		//gets source code from buggy stack trace
 		this.code = root.getCode().getCode();
-
+		//finds first call stmt before index of correct trace and returns the values of the local variables at the time of this call stmt
 		List<Expression> args = AuxMethods.extractArguments(root.getTraces(), indexOfCorrectTrace);
-
+		//removes all traces with function executing during time of correction, and all 
+		//traces after the correct trace
 		this.traces = root.getTraces().findSubTraces(this.targetFunc, indexOfCorrectTrace);
 		code = code.replace("\\n", "\n");
 		code = code.replace("\\t", "\t");
 		System.out.println(code);
 
 		ANTLRInputStream input = new ANTLRInputStream(code);
+		//node in java ast for the currently executing function at time of correction
 		Function function = (Function) javaCompile(input, targetFunc);
 		System.out.println(function);
-
+		
+		//so far I beleive this is the class that makes the magic correction
 		ConstraintFactory cf = new ConstraintFactory(traces, jsonTraceCompile(correctTrace),
 				new FcnHeader(function.getName(), function.getReturnType(), function.getParames()), args);
+
 		if (this.repair_range != null)
 			cf.setRange(this.repair_range);
 		String script;
+		//linear combos have something to do with mapping line numbers to repaired strings
 		if(useLC)
 			script = cf.getScript_linearCombination(function.getBody());
 		else
@@ -111,6 +125,9 @@ public class MainEntrance {
 		Trace tr = jsonTraceCompile(trace);
 		return tr.getFuncname();
 	}
+	/*
+	creates an ast for a json trace file and returns the root
+	*/
 
 	public static Root jsonRootCompile(String s) {
 		ANTLRInputStream input = new ANTLRInputStream(s);
@@ -129,7 +146,7 @@ public class MainEntrance {
 		ParseTree tree = parser.trace();
 		return (Trace) new JsonVisitor().visit(tree);
 	}
-
+	//creates a parse tree and returns this as a sketch object
 	public static SketchObject javaCompile(ANTLRInputStream input, String target) {
 		simpleJavaLexer lexer = new simpleJavaLexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);

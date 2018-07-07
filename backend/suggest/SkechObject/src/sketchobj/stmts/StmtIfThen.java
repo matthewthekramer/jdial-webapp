@@ -15,6 +15,7 @@ import sketchobj.core.Type;
 import sketchobj.expr.ExprConstant;
 import sketchobj.expr.ExprFunCall;
 import sketchobj.expr.Expression;
+@SuppressWarnings("unchecked")
 
 public class StmtIfThen extends Statement {
 	private Expression cond;

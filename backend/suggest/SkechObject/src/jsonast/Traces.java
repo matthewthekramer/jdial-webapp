@@ -5,6 +5,7 @@ import java.util.List;
 
 import jsonparser.jsonParser.TraceContext;
 
+//each trace represents a state in the original source code
 public class Traces extends JsonNode {
 
 	private List<Trace> tracelist;
@@ -31,6 +32,10 @@ public class Traces extends JsonNode {
 		this.length = length;
 	}
 
+	/*
+	* removes all traces above given bound or that contain the given function name, 
+	and any traces that have a step_line event
+	*/
 	public Traces findSubTraces(String targetFunc, int bound) {
 		List<Integer> toRemove = new ArrayList<Integer>();
 		for (int i = bound; i >= 0; i--) {
