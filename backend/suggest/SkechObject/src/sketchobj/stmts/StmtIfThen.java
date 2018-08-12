@@ -26,7 +26,7 @@ public class StmtIfThen extends Statement {
 	/**
 	 * Create a new conditional statement, with the specified condition,
 	 * consequent, and alternative. The two statements may be null if omitted.
-	 * @param i 
+	 * @param i  line number
 	 */
 	public StmtIfThen(Expression cond, Statement cons, Statement alt, int i) {
 		this.cond = cond;
@@ -144,8 +144,11 @@ public class StmtIfThen extends Statement {
 
 	@Override
 	public Map<String, Type> addRecordStmt(StmtBlock parent, int index, Map<String, Type> m) {
+		//temp store parent's statements
 		List stmts = new ArrayList(parent.stmts);
+		//replace parent's statements with this objects statements
 		parent.stmts = stmts;
+		//sets a stmt of the parent as a stmt block with a record of the current state
 		parent.stmts.set(index,
 				new StmtBlock(ConstraintFactory.recordState(this.getPrectx().getLinenumber(), this.getPrectx().getAllVars()),this));
 		

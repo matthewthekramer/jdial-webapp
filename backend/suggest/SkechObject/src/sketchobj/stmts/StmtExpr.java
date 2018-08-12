@@ -26,14 +26,21 @@ public class StmtExpr extends Statement {
 	public String toString() {
 		return expr.toString() + ";";
 	}
-
+	/**
+	 * If this stmt contains an expression that is a constant, it replaces the
+	 * the ExprConst with an ExprFunCall to the name of a function with the same 
+	 * name as the constant's name concatinated with index
+	 * it then returns ConstData which wraps the info of the removed ExprConst
+	*/
 	@Override
 	public ConstData replaceConst(int index) {
 		List<SketchObject> toAdd = new ArrayList<SketchObject>();
 		if (expr instanceof ExprConstant) {
 			int value = ((ExprConstant) expr).getVal();
 			Type t = ((ExprConstant) expr).getType();
+			//replaces the ExprConst with a function call
 			expr = new ExprFunCall("Const" + index, new ArrayList<Expression>());
+			//returns an object that wraps all the info of the ExprConstant
 			return new ConstData(t, toAdd, index + 1, value,null,this.getLineNumber());
 		}
 		return expr.replaceConst(index);

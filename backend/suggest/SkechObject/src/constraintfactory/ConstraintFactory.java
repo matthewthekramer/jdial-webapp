@@ -28,7 +28,9 @@ public class ConstraintFactory {
 	static Trace finalState;
 	// static int finalCount;
 	static FcnHeader fh;
+	//line number of final state
 	static int hitline = 0;
+	//number of times the final state's line is executed
 	static int hitnumber = 0;
 	static int length = 5;
 	static int originalLength = 5;
@@ -52,6 +54,8 @@ public class ConstraintFactory {
 		ConstraintFactory.finalState = finalState;
 		ConstraintFactory.hitline = finalState.getLine();
 		hitnumber = 0;
+		//for every state of the program, check if the line number executing matches the line number of the
+		//final state and increase hitcount if it does
 		for (int i = 0; i < oriTrace.getLength(); i++) {
 			if (oriTrace.getTraces().get(i).getLine() == ConstraintFactory.hitline) {
 				hitnumber++;
@@ -84,7 +88,7 @@ public class ConstraintFactory {
 		ConstraintFactory.limited_range = true;
 		ConstraintFactory.repair_range = l;
 	}
-
+	//TODO: understand this
 	// ------------ main function, generate Sketch script for code <source>
 	public String getScript(Statement source) {
 
@@ -97,7 +101,7 @@ public class ConstraintFactory {
 			System.out.println(externalFuncs.get(0).getName_Java());
 
 		buildContext((StmtBlock) source);
-		// replace all constants in source code
+		// replace all constants in source code - not sure why this is done
 		if (!ConstraintFactory.limited_range) {
 			// s.replaceLinearCombination();
 			constFunDecls = ConstraintFactory.replaceConst(s);
@@ -541,7 +545,7 @@ public class ConstraintFactory {
 		}
 		return new StmtBlock(stmts);
 	}
-
+	//creates a function with an if/else stmt that returns the value of given constant
 	static public Function addConstFun(int index, int ori, Type t) {
 		Expression condition = new ExprBinary(new ExprVar("const" + index + "change"), "==", new ExprConstInt(1), 0);
 		StmtReturn return_1 = new StmtReturn(new ExprStar(), 0);
@@ -550,41 +554,49 @@ public class ConstraintFactory {
 
 		return new Function("Const" + index, t, new ArrayList<Parameter>(), ifst, FcnType.Static);
 	}
-
+	//returns a bunch of stmts that capture the state i think, TODO
 	static public Statement recordState(int lineNumber, List<String> Vars) {
 		StmtBlock result = new StmtBlock();
-		// count ++
-		result.addStmt(new StmtExpr(new ExprUnary(5, new ExprVar("count"), 0), 0));
-		// varToUpdateArray[count] = varToUpdate;
+		// count ++ (what next stmt adds to result)
+		result.addStmt(new StmtExpr(new ExprUnary(ExprUnary.UNOP_POSTINC, new ExprVar("count"), 0), 0));
+		// varToUpdateArray[count] = varToUpdate; (what next stmt adds to result)
 		result.addStmt(
 				new StmtAssign(
 						new ExprArrayRange(new ExprVar("lineArray"),
 								new ExprArrayRange.RangeLen(new ExprVar("count"), null), 0),
 						new ExprConstInt(lineNumber), 0));
 		if (lineNumber == hitline) {
+			//linehit++
 			result.addStmt(new StmtExpr(new ExprUnary(5, new ExprVar("linehit"), 0), 0));
 			List<Statement> consStmts = new ArrayList<>();
+			//for every local variable v, in scope at the final state, add: finalv = v; to const
+			//statmenets
 			for (String v : finalState.getOrdered_locals()) {
 				consStmts.add(new StmtAssign(new ExprVar(v + "final"), new ExprVar(v), 0));
 			}
+			//finalcount = count;
 			consStmts.add(new StmtAssign(new ExprVar("finalcount"), new ExprVar("count"), 0));
 			if (ConstraintFactory.fh.getReturnType() instanceof TypeVoid) {
 				consStmts.add(new StmtReturn(0));
 			}
 			consStmts.add(new StmtReturn(new ExprConstInt(0), 0));
-			Statement cons = new StmtBlock(consStmts);
+			Statement cons = new StmtBlock(consStmts);//cons is now consStmts
+			//if linehit == (Constraint.hitnumber) then do all cons stmts
 			Statement iflinehit = new StmtIfThen(
 					new ExprBinary(new ExprVar("linehit"), "==", new ExprConstInt(ConstraintFactory.hitnumber), 0),
 					cons, null, 0);
 			result.addStmt(iflinehit);
 		}
+		//TODO not sure purpose of this
 		for (String s : Vars) {
+			//sArray[count] = s
 			result.addStmt(new StmtAssign(new ExprArrayRange(new ExprVar(s + "Array"),
 					new ExprArrayRange.RangeLen(new ExprVar("count"), null), 0), new ExprVar(s), 0));
 		}
 		return result;
 	}
-
+	//replaces constants in the source code with functions that return that constant's value
+	//works way down ast from source statement node
 	static public Statement replaceConst(Statement source) {
 		List<Statement> list = new ArrayList<Statement>();
 		Stack<SketchObject> stmtStack = new Stack<SketchObject>();
@@ -593,14 +605,18 @@ public class ConstraintFactory {
 		while (!stmtStack.empty()) {
 			SketchObject target = stmtStack.pop();
 			ConstData data = null;
+			//if a constant, replaces it with a function call and adds data to addToConstMap
 			if (ConstraintFactory.limited_range) {
 				data = target.replaceConst(index, ConstraintFactory.repair_range);
 			} else {
 				data = target.replaceConst(index);
 			}
 			if (data.getType() != null) {
+				//keeps a map of constants to their occurances in the ast from source
 				addToConstMap(data);
+				//keeps a map of constants to their line number
 				addToConstMapLine(data);
+
 				list.add(constChangeDecl(index, new TypePrimitive(1)));
 				list.add(new StmtFunDecl(addConstFun(index, data.getValue(), data.getType())));
 			}
@@ -613,7 +629,11 @@ public class ConstraintFactory {
 	private static void addToConstMapLine(ConstData data) {
 		constMapLine.put(data.getIndex(), data.getOriline());
 	}
-
+	/*
+	 constMap keeps record of the order that constants show up in the ast
+	 for example, the first constant that shows up when going top down would get an index of 1
+	
+	*/
 	private static void addToConstMap(ConstData data) {
 		if (constMap.containsKey(data.getName())) {
 			Set<Integer> s = constMap.get(data.getName());
